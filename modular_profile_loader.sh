@@ -309,8 +309,8 @@ function modular_bash_priority() {
     new_priority=$(printf "%02d" $new_priority)
 
     module_name=$(basename $module)
-    new_module_name=$(echo "$module_name" | sed "s/^[0-9-]+/$new_priority-/")
-    new_module = $(echo "$module" | sed "s/$module_name/$new_module_name/")
+    new_module_name=$(echo "$module_name" | sed "s/^[0-9]\{1,\}/$new_priority/")
+    new_module=$(echo "$module" | sed "s/$module_name/$new_module_name/")
 
     # Rename the module with its new priority
     modular_bash_rename $module $new_module
