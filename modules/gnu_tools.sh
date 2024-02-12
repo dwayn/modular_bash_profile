@@ -5,3 +5,5 @@ PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
 # PATH="/opt/homebrew/opt/coreutils/libexec/gnubin:$PATH"
 
 alias tac="gtac"
+
+export CFLAGS="-I$(xcrun --show-sdk-path)/usr/include"

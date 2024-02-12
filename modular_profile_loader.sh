@@ -348,7 +348,7 @@ function modular_bash_enable() {
     # must be provided.
     # If $2 is a number, then it is a priority and we should use it.
     if ! [[ $2 =~ ^[0-9]+$ ]]; then
-        if $location == "local"; then
+        if [ $location = "local" ]; then
             if [ -z "${_modular_bash_local_default_priorities[$module_name]}" ]; then
                 echo "No default priority set for $module_name, so a priority must be provided to enable."
                 return 1
@@ -447,7 +447,7 @@ function modular_bash_disable() {
 
     # determine the enabled module name based on the provided module name and location of the module
     # by looking up in the _modular_bash_enabled_${location}_modules map
-    if $location == "local"; then
+    if [ $location = "local" ]; then
         enabled_module_name=${_modular_bash_enabled_local_modules[$module]}
     else
         enabled_module_name=${_modular_bash_enabled_global_modules[$module]}
@@ -586,7 +586,7 @@ function modular_bash_priority() {
 
     # Get the name of the enabled module based on the provided module name and location of the module
     # by looking up in the _modular_bash_enabled_${location}_modules map
-    if $location == "local"; then
+    if [ $location = "local" ]; then
         enabled_module_name=${_modular_bash_enabled_local_modules[$module]}
     else
         enabled_module_name=${_modular_bash_enabled_global_modules[$module]}
