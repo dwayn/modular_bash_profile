@@ -335,22 +335,34 @@ function modular_bash_enable() {
     # must be provided.
     # If $2 is a number, then it is a priority and we should use it.
     if ! [[ $2 =~ ^[0-9]+$ ]]; then
-        if [ -z "${_modular_bash_${location}_default_priorities[$module_name]}" ]; then
-            echo "No default priority set for $module_name, so a priority must be provided to enable."
-            return 1
+        if $location == "local"; then
+            if [ -z "${_modular_bash_local_default_priorities[$module_name]}" ]; then
+                echo "No default priority set for $module_name, so a priority must be provided to enable."
+                return 1
+            fi
+            priority=${_modular_bash_local_default_priorities[$module_name]}
+            # If the module is already enabled, then inform the user and return 1
+            if [ -n "${_modular_bash_enabled_local_modules[$module_name]}" ]; then
+                echo "Module already enabled: $module_name"
+                return 1
+            fi
+        else
+            if [ -z "${_modular_bash_global_default_priorities[$module_name]}" ]; then
+                echo "No default priority set for $module_name, so a priority must be provided to enable."
+                return 1
+            fi
+            priority=${_modular_bash_global_default_priorities[$module_name]}
+            # If the module is already enabled, then inform the user and return 1
+            if [ -n "${_modular_bash_enabled_global_modules[$module_name]}" ]; then
+                echo "Module already enabled: $module_name"
+                return 1
+            fi
         fi
-        priority=${_modular_bash_${location}_default_priorities[$module_name]}
     else
         priority=$2
     fi
     # ensure priority is 2 digits
     priority=$(printf "%02d" $priority)
-
-    # If the module is already enabled, then inform the user and return 1
-    if [ -n "${_modular_bash_enabled_${location}_modules[$module_name]}" ]; then
-        echo "Module already enabled: $module_name"
-        return 1
-    fi
 
     # If a module with the same priority and base module name is symlinked, then inform the user that
     # the module a module with the same name and priority is already enabled and return 1.
@@ -373,6 +385,12 @@ function modular_bash_enable() {
 # module that is either a global module or a local one. The module name provided can include the .sh
 # file extension, but it is not required.
 function modular_bash_disable() {
+    # Protect against not providing a module name
+    if [ -z "$1" ]; then
+        echo "No module name provided"
+        return 1
+    fi
+
     local module
     local module_name
     local location
@@ -412,7 +430,11 @@ function modular_bash_disable() {
 
     # determine the enabled module name based on the provided module name and location of the module
     # by looking up in the _modular_bash_enabled_${location}_modules map
-    enabled_module_name=${_modular_bash_enabled_${location}_modules[$module]}
+    if $location == "local"; then
+        enabled_module_name=${_modular_bash_enabled_local_modules[$module]}
+    else
+        enabled_module_name=${_modular_bash_enabled_global_modules[$module]}
+    fi
 
     # If the module is not enabled, then inform the user and return 1
     if [ -z "$enabled_module_name" ]; then
@@ -474,12 +496,6 @@ function modular_bash_rename() {
 
 
 }
-
-
-
-
-
-
 
 # Bash function to rename a module in either global or local modules. This will rename the file in the
 # appropriate folder and update the symlink in the enabled folder if it is enabled.
@@ -550,7 +566,11 @@ function modular_bash_rename_v0() {
 
     # find the enabled module name based on the provided module name and location of the module
     # by looking up in the _modular_bash_enabled_${location}_modules map
-    enabled_module_name=${_modular_bash_enabled_${location}_modules[$module]}
+    if $location == "local"; then
+        enabled_module_name=${_modular_bash_enabled_local_modules[$module]}
+    else
+        enabled_module_name=${_modular_bash_enabled_global_modules[$module]}
+    fi
     # if there is an enabled module name, then get the current priority of the enabled module based on the enabled module name
     # and remove the symlink from the enabled folder and create a new symlink with the new module name and the old priority
     if [ -n "$enabled_module_name" ]; then
@@ -625,7 +645,11 @@ function modular_bash_priority() {
 
     # Get the name of the enabled module based on the provided module name and location of the module
     # by looking up in the _modular_bash_enabled_${location}_modules map
-    enabled_module_name=${_modular_bash_enabled_${location}_modules[$module]}
+    if $location == "local"; then
+        enabled_module_name=${_modular_bash_enabled_local_modules[$module]}
+    else
+        enabled_module_name=${_modular_bash_enabled_global_modules[$module]}
+    fi
     # If the module is not enabled, then inform the user and return 1
     if [ -z "$enabled_module_name" ]; then
         echo "Module not enabled: $module, instead of changing priority, enable the module with the new priority"
@@ -733,16 +757,30 @@ function modular_bash_edit() {
 # and not the full path for modules that are not enabled.
 function _complete_modular_bash_enable() {
     local cur
+    local completions
+    local completions_short
     #   set a local variable that holds the current word being completed
     cur=${COMP_WORDS[COMP_CWORD]}
     # Get the list of all modules and all enabled modules
-    modules=$(ls "$(dirname "${BASH_SOURCE[0]}")/modules/"*.sh 2>/dev/null | sort)
-    local_modules="$(ls "$(dirname "${BASH_SOURCE[0]}")/local/"*.sh 2>/dev/null | sort)"
-    all_modules=$(echo "$modules $local_modules" | xargs -n 1 basename | sort | uniq | sed 's/\.sh$//')
-    enabled_modules=$(ls "$(dirname "${BASH_SOURCE[0]}")/enabled/"*.sh 2>/dev/null | xargs -n 1 basename | sort | sed 's/\.sh$//')
-    # Filter the enabled modules from the all_modules list for completions
-    completions=$(comm -23 <(echo "$all_modules") <(echo "$enabled_modules"))
-    # Use compgen to generate possible completions
+    modules=$(ls "$(dirname "${BASH_SOURCE[0]}")/modules/"*.sh 2>/dev/null | xargs -n1 basename | sort)
+    local_modules="$(ls "$(dirname "${BASH_SOURCE[0]}")/local/"*.sh 2>/dev/null | xargs -n1 basename | sort)"
+    for module in $modules; do
+        if [ -n "${_modular_bash_enabled_global_modules[$module]}" ]; then
+            continue
+        fi
+        completions_short+=$(basename $module | sed 's/\.sh//g')$'\n'
+        completions+="global/"$(basename $module | sed 's/\.sh//g')$'\n'
+    done
+    for module in $local_modules; do
+        if [ -n "${_modular_bash_enabled_local_modules[$module]}" ]; then
+            continue
+        fi
+        completions_short+=$(basename $module | sed 's/\.sh//g')$'\n'
+        completions+="local/"$(basename $module | sed 's/\.sh//g')$'\n'
+    done
+    completions=$(echo "$completions" | sort)
+    completions_short=$(echo "$completions_short" | sort)
+    completions=$(echo "$completions_short $completions")
     COMPREPLY=($(compgen -W "$completions" -- "$cur"))
 }
 
@@ -754,12 +792,30 @@ complete -F _complete_modular_bash_enable modular_bash_enable
 # of the module (without the file extension) and not the full path for modules that are enabled.
 function _complete_modular_bash_disable() {
     local cur
+    local completion_modules
+    local completion_modules_short
     #   set a local variable that holds the current word being completed
     cur=${COMP_WORDS[COMP_CWORD]}
     # Get the list of all modules and all enabled modules
-    enabled_modules=$(ls "$(dirname "${BASH_SOURCE[0]}")/enabled/"*.sh 2>/dev/null | xargs -n 1 basename | sort | sed 's/\.sh$//')
+    enabled_modules=$(ls "$(dirname "${BASH_SOURCE[0]}")/enabled/"*.sh 2>/dev/null | xargs -n 1 basename | sort)
+    # iterate through enabled_modules and lookup the location of the module in the _modular_bash_enabled_module_locations map
+    # and the module name in the _modular_bash_enabled_module_names map to get the full module name with the location prefix
+    # and add it to completion_modules list
+    completion_modules=""
+    completion_modules_short=""
+    for enabled_module in $enabled_modules; do
+        location=${_modular_bash_enabled_module_locations[$enabled_module]}
+        module_name=${_modular_bash_enabled_module_names[$enabled_module]}
+        completion_modules+="$location/$module_name "
+        completion_modules_short+="$module_name "
+    done
+    completion_modules=$(echo $completion_modules | sort)
+    completion_modules_short=$(echo $completion_modules_short | sort)
+
+    completions=$(echo "$completion_modules $completion_modules_short" | sed 's/\.sh//g')
+
     # Use compgen to generate possible completions
-    COMPREPLY=($(compgen -W "$enabled_modules" -- "$cur"))
+    COMPREPLY=($(compgen -W "$completions" -- "$cur"))
 }
 
 # Register the completion function for the disable function
