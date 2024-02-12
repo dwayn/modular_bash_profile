@@ -1,7 +1,5 @@
 alias sep='echo -e "\n\n\e[1;34m#################################\e[m\n\e[1;34m############## SEP ##############\e[m\n\e[1;34m#################################\e[m\n\n"'
 
-alias home-wsl='ssh 192.168.1.35'
-
 function prompt_yn()
 {
     local prompt="${1:-"Continue?"}"
@@ -28,4 +26,3 @@ function prompt_yn()
         esac
     done
 }
-
