@@ -330,7 +330,7 @@ function modular_bash_enable() {
 
     # Determine if the module is in the local or global folder
     if echo "$local_modules" | grep -q "/$module"; then
-        if echo "$global_modules" | grep -q/ "$module"; then
+        if echo "$global_modules" | grep -q "/$module"; then
             echo "Duplicate module found in local and global: $module \nPlease indicate which module \
             to enable using the local/ or global/ prefix. E.g. local/$module or global/$module"
             return 1
@@ -385,7 +385,7 @@ function modular_bash_enable() {
     fi
 
     # Create the symlink in the enabled folder and inform the user that the module has been enabled.
-    module_dir=$(echo $location | sed 's/^global\//modules\//')
+    module_dir=$(echo $location | sed 's/^global/modules/')
     ln -s "../$module_dir/$module_name" "$MODULAR_BASH_ROOT/enabled/$priority-$module_name"
     _modular_bash_reload
     echo "Module enabled: $module_name"
@@ -432,7 +432,7 @@ function modular_bash_disable() {
 
     # determine if the module is in the local or global folder
     if echo "$local_modules" | grep -q "/$module"; then
-        if echo "$global_modules" | grep -q/ "$module"; then
+        if echo "$global_modules" | grep -q "/$module"; then
             echo "Duplicate module found in local and global: $module \nPlease indicate which module \
             to enable using the local/ or global/ prefix. E.g. local/$module or global/$module"
             return 1
