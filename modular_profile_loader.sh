@@ -28,6 +28,19 @@ declare -A _modular_bash_local_default_enabled
 declare -A _modular_bash_global_default_enabled
 
 
+# if there is a modular-bash.sh file in the local module directory, then source it.
+# This is necessary to ensure that the pathing is setup correctly for the rest of the load of this file.
+if [ -f "$(dirname "${BASH_SOURCE[0]}")/local/modular-bash.sh" ]; then
+    source "$(dirname "${BASH_SOURCE[0]}")/local/modular-bash.sh"
+fi
+# if MODULAR_BASH_ROOT is not set, then set it to the default value of $(dirname "${BASH_SOURCE[0]}") and
+# inform the user they should run the modular_bash_init function to set it or set it themselves before
+# sourcing this file.
+if [ -z "$MODULAR_BASH_ROOT" ]; then
+    MODULAR_BASH_ROOT=$(dirname "${BASH_SOURCE[0]}")
+    echo "MODULAR_BASH_ROOT not set, run modular_bash_init to set it or set it yourself to ensure proper functionality"
+fi
+
 # Helper function to parse the .defaults file and set the default priorities and enabled/disabled status
 # for the modules based on the file.
 function _modular_bash_parse_defaults() {
@@ -37,7 +50,7 @@ function _modular_bash_parse_defaults() {
     local location
     local priority
     local module
-    defaults_file=$(dirname "${BASH_SOURCE[0]}")/local/.defaults
+    defaults_file=$MODULAR_BASH_ROOT/local/.defaults
     if [ -f "$defaults_file" ]; then
         while read -r line; do
             # Skip any lines that start with a comment or are empty
@@ -91,12 +104,12 @@ function modular_bash_save_defaults() {
     _modular_bash_parse_defaults
     _modular_bash_reload_maps
 
-    defaults_file=$(dirname "${BASH_SOURCE[0]}")/local/.defaults
+    defaults_file=$MODULAR_BASH_ROOT/local/.defaults
     comments=$(grep -E "^\s*#" "$defaults_file" 2>/dev/null)
-    enabled_modules=$(ls "$(dirname "${BASH_SOURCE[0]}")/enabled/"*.sh 2>/dev/null | xargs -n 1 basename | sort)
-    defaults_file=$(dirname "${BASH_SOURCE[0]}")/local/.defaults
+    enabled_modules=$(ls "$MODULAR_BASH_ROOT/enabled/"*.sh 2>/dev/null | xargs -n 1 basename | sort)
+    defaults_file=$MODULAR_BASH_ROOT/local/.defaults
     # Generate into a temp file to ensure we don't lose the original if something goes wrong
-    temp_defaults_file=$(dirname "${BASH_SOURCE[0]}")/local/.defaults.tmp
+    temp_defaults_file=$MODULAR_BASH_ROOT/local/.defaults.tmp
     rm -f "$temp_defaults_file"
     touch "$temp_defaults_file"
     echo "$comments" > "$temp_defaults_file"
@@ -118,7 +131,7 @@ function modular_bash_save_defaults() {
     # Find all the global modules that are not currently enabled and output them to the temp file with
     # their default priority if they currently have a default priority set in the .defaults file. Otherwise,
     # they will not be output to the temp file.
-    for global_module in $(ls "$(dirname "${BASH_SOURCE[0]}")/modules/"*.sh 2>/dev/null | xargs -n 1 basename | sort); do
+    for global_module in $(ls "$MODULAR_BASH_ROOT/modules/"*.sh 2>/dev/null | xargs -n 1 basename | sort); do
         # if the global module name is in _modular_bash_global_modules, then it is currently enabled and we can skip it here
         if [ -n "${_modular_bash_enabled_global_modules[$global_module]}" ]; then
             continue
@@ -138,7 +151,7 @@ function modular_bash_save_defaults() {
     # Find all the local modules that are not currently enabled and output them to the temp file with
     # their default priority if they currently have a default priority set in the .defaults file. Otherwise,
     # they will not be output to the temp file.
-    for local_module in $(ls "$(dirname "${BASH_SOURCE[0]}")/local/"*.sh 2>/dev/null | xargs -n 1 basename | sort); do
+    for local_module in $(ls "$MODULAR_BASH_ROOT/local/"*.sh 2>/dev/null | xargs -n 1 basename | sort); do
         # if the local module name is in _modular_bash_local_modules, then it is currently enabled and we can skip it here
         if [ -n "${_modular_bash_enabled_local_modules[$local_module]}" ]; then
             continue
@@ -179,7 +192,7 @@ function _modular_bash_set_enabled_module() {
     fi
 
     # Get the name of the module file that the symlink points to
-    module=$(ls -l "$(dirname "${BASH_SOURCE[0]}")/enabled/$enabled_module" | awk '{print $NF}')
+    module=$(ls -l "$MODULAR_BASH_ROOT/enabled/$enabled_module" | awk '{print $NF}')
     module_name=$(basename $module)
     priority=$(echo $enabled_module | sed 's/^\([0-9]\{1,\}\)-.*/\1/')
     location=$(echo $module | grep -o "local" || echo "global")
@@ -217,7 +230,7 @@ function _modular_bash_clear_enabled_modules() {
 
 _modular_bash_reload_maps() {
     _modular_bash_clear_enabled_modules
-    for file in "$(dirname "${BASH_SOURCE[0]}")/enabled/"*; do
+    for file in "$MODULAR_BASH_ROOT/enabled/"*; do
         if [ "${file##*/}" != "README.md" ]; then
             _modular_bash_set_enabled_module "$file"
         fi
@@ -228,11 +241,9 @@ _modular_bash_reload() {
     local notify
     local location
     notify=${1:-false}
-    # Reload the enabled modules maps
-    _modular_bash_reload_maps
 
     # Iterate through all the files in the enabled folder and source them to load/reload them
-    for file in "$(dirname "${BASH_SOURCE[0]}")/enabled/"*; do
+    for file in "$MODULAR_BASH_ROOT/enabled/"*; do
         if [ "${file##*/}" != "README.md" ]; then
             if [ "${notify}" == "true" ]; then echo "Reloading $file"; fi
             source "$file"
@@ -261,9 +272,10 @@ function modular_bash_list() {
     local priority
     local module_name
 
+    # Reload the enabled modules maps
     _modular_bash_reload_maps
 
-    enabled_modules=$(ls "$(dirname "${BASH_SOURCE[0]}")/enabled/"*.sh 2>/dev/null | xargs -n 1 basename | sort)
+    enabled_modules=$(ls "$MODULAR_BASH_ROOT/enabled/"*.sh 2>/dev/null | xargs -n 1 basename | sort)
     for enabled_module in $enabled_modules; do
         location=${_modular_bash_enabled_module_locations[$enabled_module]}
         location_column=$(echo $location | sed 's/local/(local) /g' | sed 's/global/(global)/g')
@@ -271,14 +283,14 @@ function modular_bash_list() {
         module_name=${_modular_bash_enabled_module_names[$enabled_module]}
         echo -e "+ $location_column $priority-$module_name"
     done
-    for global_module in $(ls "$(dirname "${BASH_SOURCE[0]}")/modules/"*.sh 2>/dev/null | xargs -n 1 basename | sort); do
+    for global_module in $(ls "$MODULAR_BASH_ROOT/modules/"*.sh 2>/dev/null | xargs -n 1 basename | sort); do
         # if global_module is not in _modular_bash_enabled_global_modules, then it is not enabled so
         # output it as not enabled
         if [ -z "${_modular_bash_enabled_global_modules[$global_module]}" ]; then
             echo -e "- (global) $global_module"
         fi
     done
-    for local_module in $(ls "$(dirname "${BASH_SOURCE[0]}")/local/"*.sh 2>/dev/null | xargs -n 1 basename | sort); do
+    for local_module in $(ls "$MODULAR_BASH_ROOT/local/"*.sh 2>/dev/null | xargs -n 1 basename | sort); do
         # if local_module is not in _modular_bash_enabled_local_modules, then it is not enabled so
         # output it as not enabled
         if [ -z "${_modular_bash_enabled_local_modules[$local_module]}" ]; then
@@ -298,8 +310,9 @@ function modular_bash_enable() {
         echo "No module name provided"
         return 1
     fi
-    # reload the enabled modules maps
+    # reload the enabled module maps and defaults
     _modular_bash_reload_maps
+    _modular_bash_parse_defaults
 
     local global_modules
     local local_modules
@@ -312,8 +325,8 @@ function modular_bash_enable() {
         module+=".sh"
     fi
     module_name=$(basename $module)
-    local_modules="$(ls "$(dirname "${BASH_SOURCE[0]}")/local/"*.sh 2>/dev/null | sort)"
-    global_modules="$(ls "$(dirname "${BASH_SOURCE[0]}")/modules/"*.sh 2>/dev/null | sort)"
+    local_modules="$(ls "$MODULAR_BASH_ROOT/local/"*.sh 2>/dev/null | sort)"
+    global_modules="$(ls "$MODULAR_BASH_ROOT/modules/"*.sh 2>/dev/null | sort)"
 
     # Determine if the module is in the local or global folder
     if echo "$local_modules" | grep -q "$module"; then
@@ -366,14 +379,14 @@ function modular_bash_enable() {
 
     # If a module with the same priority and base module name is symlinked, then inform the user that
     # the module a module with the same name and priority is already enabled and return 1.
-    if [ -n "$(ls "$(dirname "${BASH_SOURCE[0]}")/enabled/"$priority-$module_name 2>/dev/null)" ]; then
+    if [ -n "$(ls "$MODULAR_BASH_ROOT/enabled/"$priority-$module_name 2>/dev/null)" ]; then
         echo "Module with the same name and priority already enabled: $module_name"
         return 1
     fi
 
     # Create the symlink in the enabled folder and inform the user that the module has been enabled.
     module_dir=$(echo $location | sed 's/^global\//modules\//')
-    ln -s "../$module_dir/$module_name" "$(dirname "${BASH_SOURCE[0]}")/enabled/$priority-$module_name"
+    ln -s "../$module_dir/$module_name" "$MODULAR_BASH_ROOT/enabled/$priority-$module_name"
     _modular_bash_reload
     echo "Module enabled: $module_name"
 }
@@ -399,6 +412,10 @@ function modular_bash_disable() {
     local all_modules
     local enabled_modules
 
+    # reload the enabled module maps and defaults
+    _modular_bash_reload_maps
+    _modular_bash_parse_defaults
+
     #   set a local variable that holds the name of the module requested, and if it does not end in .sh,
     #  then append it to the end of the module name.
     module=$1
@@ -408,10 +425,10 @@ function modular_bash_disable() {
     module_name=$(basename $module)
 
     # Get the list of all modules and all enabled modules
-    modules=$(ls "$(dirname "${BASH_SOURCE[0]}")/modules/"*.sh 2>/dev/null | sort)
-    local_modules="$(ls "$(dirname "${BASH_SOURCE[0]}")/local/"*.sh 2>/dev/null | sort)"
+    modules=$(ls "$MODULAR_BASH_ROOT/modules/"*.sh 2>/dev/null | sort)
+    local_modules="$(ls "$MODULAR_BASH_ROOT/local/"*.sh 2>/dev/null | sort)"
     all_modules=$(echo "$modules $local_modules" | xargs -n 1 basename | sort)
-    enabled_modules=$(ls "$(dirname "${BASH_SOURCE[0]}")/enabled/"*.sh 2>/dev/null | xargs -n 1 basename | sort)
+    enabled_modules=$(ls "$MODULAR_BASH_ROOT/enabled/"*.sh 2>/dev/null | xargs -n 1 basename | sort)
 
     # determine if the module is in the local or global folder
     if echo "$local_modules" | grep -q "$module"; then
@@ -443,8 +460,10 @@ function modular_bash_disable() {
     fi
 
     # Remove the symlink from the enabled folder and inform the user that the module has been disabled.
-    rm "$(dirname "${BASH_SOURCE[0]}")/enabled/$enabled_module_name"
-    _modular_bash_reload
+    rm "$MODULAR_BASH_ROOT/enabled/$enabled_module_name"
+    # reload the enabled module maps
+    _modular_bash_reload_maps
+
     echo "Module disabled: $module"
 }
 
@@ -467,6 +486,10 @@ function modular_bash_rename() {
     local module_name
     local new_module_name
 
+    # reload the enabled module maps and defaults
+    _modular_bash_reload_maps
+    _modular_bash_parse_defaults
+
     # set a local variable that holds the name of the module requested, and if it does not end in .sh,
     # then append it to the end of the module name. Also, rename the global prefix to modules
     module=$(echo $1 | sed 's/^global\//modules\//')
@@ -481,10 +504,10 @@ function modular_bash_rename() {
     new_module_name=$(basename $new_module)
 
     # Get the list of all modules and all enabled modules
-    modules=$(ls "$(dirname "${BASH_SOURCE[0]}")/modules/"*.sh 2>/dev/null | sort)
-    local_modules="$(ls "$(dirname "${BASH_SOURCE[0]}")/local/"*.sh 2>/dev/null | sort)"
+    modules=$(ls "$MODULAR_BASH_ROOT/modules/"*.sh 2>/dev/null | sort)
+    local_modules="$(ls "$MODULAR_BASH_ROOT/local/"*.sh 2>/dev/null | sort)"
     all_modules=$(echo "$modules $local_modules" | xargs -n 1 basename | sort)
-    enabled_modules=$(ls "$(dirname "${BASH_SOURCE[0]}")/enabled/"*.sh 2>/dev/null | xargs -n 1 basename | sort)
+    enabled_modules=$(ls "$MODULAR_BASH_ROOT/enabled/"*.sh 2>/dev/null | xargs -n 1 basename | sort)
 
     # Check if the module exists in the modules or local folder. If not, then output an error message and
     #  return 1.
@@ -493,95 +516,8 @@ function modular_bash_rename() {
         return 1
     fi
 
-
-
 }
 
-# Bash function to rename a module in either global or local modules. This will rename the file in the
-# appropriate folder and update the symlink in the enabled folder if it is enabled.
-# Example usage:
-#   # Rename a module that is in both local and global modules using a reference to local or global
-#   modular_bash_rename local/module1 local/module1-new
-#   modular_bash_rename global/module2 global/module2-new
-#   # Rename a module that is unique across local and global modules by just providing the module name
-#   modular_bash_rename module2 module2-new
-function modular_bash_rename_v0() {
-    # Protect against not providing a module name
-    if [ -z "$1" ] || [ -z "$2" ]; then
-        echo "No module name provided"
-        return 1
-    fi
-    local module
-    local new_module
-    local module_name
-    local new_module_name
-    local location
-
-    # set a local variable that holds the name of the module requested, and if it does not end in .sh,
-    # then append it to the end of the module name. Also, rename the global prefix to modules
-    module=$(echo $1 | sed 's/^global\//modules\//')
-    new_module=$(echo $2 | sed 's/^global\//modules\//')
-    if [ "${module: -3}" != ".sh" ]; then
-        module+=".sh"
-    fi
-    if [ "${new_module: -3}" != ".sh" ]; then
-        new_module+=".sh"
-    fi
-
-    module_name=$(basename $module)
-    new_module_name=$(basename $new_module)
-
-    # Get the list of all modules and all enabled modules
-    modules=$(ls "$(dirname "${BASH_SOURCE[0]}")/modules/"*.sh 2>/dev/null | sort)
-    local_modules="$(ls "$(dirname "${BASH_SOURCE[0]}")/local/"*.sh 2>/dev/null | sort)"
-    all_modules=$(echo "$modules $local_modules" | xargs -n 1 basename | sort)
-    enabled_modules=$(ls "$(dirname "${BASH_SOURCE[0]}")/enabled/"*.sh 2>/dev/null | xargs -n 1 basename | sort)
-
-    # Check if the module exists in the modules or local folder. If not, then output an error message and
-    #  return 1.
-    if ! echo "$all_modules" | grep -q "$module"; then
-        echo "Module not found: $1"
-        return 1
-    fi
-
-
-    if echo "$local_modules" | grep -q "$module"; then
-        if echo "$modules" | grep -q "$module"; then
-            echo "Duplicate module found in local and global: $module \nPlease indicate which module \
-            to rename using the local/ or global/ prefix. E.g. local/$module or global/$module"
-            return 1
-        else
-            # Rename local module
-            mv "$(dirname "${BASH_SOURCE[0]}")/local/$module_name" "$(dirname "${BASH_SOURCE[0]}")/local/$new_module_name"
-            location="local"
-        fi
-    elif echo "$modules" | grep -q "$module"; then
-        # Rename global module
-        mv "$(dirname "${BASH_SOURCE[0]}")/modules/$module_name" "$(dirname "${BASH_SOURCE[0]}")/modules/$new_module_name"
-        location="global"
-    else
-        echo "Module not found: $1"
-        return 1
-    fi
-
-    # find the enabled module name based on the provided module name and location of the module
-    # by looking up in the _modular_bash_enabled_${location}_modules map
-    if $location == "local"; then
-        enabled_module_name=${_modular_bash_enabled_local_modules[$module]}
-    else
-        enabled_module_name=${_modular_bash_enabled_global_modules[$module]}
-    fi
-    # if there is an enabled module name, then get the current priority of the enabled module based on the enabled module name
-    # and remove the symlink from the enabled folder and create a new symlink with the new module name and the old priority
-    if [ -n "$enabled_module_name" ]; then
-        priority=${_modular_bash_enabled_module_priorities[$enabled_module_name]}
-        rm "$(dirname "${BASH_SOURCE[0]}")/enabled/$enabled_module_name"
-        $location_dir=$(echo $location | sed 's/^global\//modules\//')
-        # Create the new symlink in the enabled folder
-        ln -s "../$location_dir/$new_module_name" "$(dirname "${BASH_SOURCE[0]}")/enabled/$priority-$new_module_name"
-    fi
-    echo "Module renamed: $module_name -> $new_module_name"
-}
 
 # Bash function to create a new module in the local folder. This will create a new file in the local
 # folder with the provided name and then open the file in the default editor for the user to edit.
@@ -600,8 +536,10 @@ function modular_bash_new() {
     fi
 
     # Create the new module file in the local folder and open it in the default editor
-    touch "$(dirname "${BASH_SOURCE[0]}")/local/$module"
-    $EDITOR "$(dirname "${BASH_SOURCE[0]}")/local/$module"
+    touch "$MODULAR_BASH_ROOT/local/$module"
+    $EDITOR "$MODULAR_BASH_ROOT/local/$module"
+    # reload the enabled module maps
+    _modular_bash_reload_maps
 }
 
 # Bash function to change the priority of a module. This will change the name of the module to change
@@ -619,6 +557,9 @@ function modular_bash_priority() {
     local module_name
     local new_module_name
     local location
+    # reload the enabled module maps and defaults
+    _modular_bash_reload_maps
+    _modular_bash_parse_defaults
 
     # set a local variable that holds the name of the module requested, and if it does not end in .sh,
     # then append it to the end of the module name. Also, rename the global prefix to modules
@@ -672,11 +613,11 @@ function modular_bash_priority() {
 
     $current_priority=${_modular_bash_enabled_module_priorities[$enabled_module_name]}
     # Remove the old symlink from the enabled folder and create a new symlink with the new priority
-    rm "$(dirname "${BASH_SOURCE[0]}")/enabled/$enabled_module_name"
+    rm "$MODULAR_BASH_ROOT/enabled/$enabled_module_name"
     $location_dir=$(echo $location | sed 's/^global\//modules\//')
-    ln -s "../$location_dir/$module_name" "$(dirname "${BASH_SOURCE[0]}")/enabled/$new_priority-$module_name"
+    ln -s "../$location_dir/$module_name" "$MODULAR_BASH_ROOT/enabled/$new_priority-$module_name"
     # Update the priority in the enabled modules maps
-    _modular_bash_set_enabled_module "$(dirname "${BASH_SOURCE[0]}")/enabled/$new_priority-$module_name"
+    _modular_bash_set_enabled_module "$MODULAR_BASH_ROOT/enabled/$new_priority-$module_name"
 }
 
 # Bash function that just outputs the contents of a module file.
@@ -704,10 +645,10 @@ function modular_bash_cat() {
             to view using the local/ or global/ prefix. E.g. local/$module or global/$module"
             return 1
         fi
-        cat "$(dirname "${BASH_SOURCE[0]}")/local/$module_name"
+        cat "$MODULAR_BASH_ROOT/local/$module_name"
         echo
     elif echo "$modules" | grep -q "$module"; then
-        cat "$(dirname "${BASH_SOURCE[0]}")/modules/$module_name"
+        cat "$MODULAR_BASH_ROOT/modules/$module_name"
         echo
     else
         echo "Module not found: $1"
@@ -741,15 +682,28 @@ function modular_bash_edit() {
             to edit using the local/ or global/ prefix. E.g. local/$module or global/$module"
             return 1
         fi
-        $EDITOR "$(dirname "${BASH_SOURCE[0]}")/local/$module_name"
+        $EDITOR "$MODULAR_BASH_ROOT/local/$module_name"
     elif echo "$modules" | grep -q "$module"; then
-        $EDITOR "$(dirname "${BASH_SOURCE[0]}")/modules/$module_name"
+        $EDITOR "$MODULAR_BASH_ROOT/modules/$module_name"
     else
         echo "Module not found: $1"
         return 1
     fi
 }
 
+# Bash function to initialize the modular bash environment. This will create a modular-bash.sh file
+# in local modules and enable it with 0 priority. This file will have a default priority of 0 and
+# will be sourced by the modular_profile_loader.sh file to initialize the modular bash environment.
+# The contents of this file is just a MODULAR_BASH_ROOT variable that points to the root of the modular
+# bash installation.
+function modular_bash_init() {
+    touch "$(dirname "${BASH_SOURCE[0]}")/local/modular-bash.sh"
+    curdir=$(pwd)
+    MODULAR_BASH_ROOT=$(echo "$curdir/$(dirname "${BASH_SOURCE[0]}")/")
+    echo "export MODULAR_BASH_ROOT=$MODULAR_BASH_ROOT" > "$(dirname "${BASH_SOURCE[0]}")/local/modular-bash.sh"
+    modular_bash_enable local/modular-bash.sh 0
+    echo "Modular bash environment initialized"
+}
 
 # Bash completion function to complete the module names for the enable function. This
 # will complete the module names based on all the .sh files in the modules or local folder, excluding
@@ -759,11 +713,15 @@ function _complete_modular_bash_enable() {
     local cur
     local completions
     local completions_short
+    # reload the enabled module maps and defaults
+    _modular_bash_reload_maps
+    _modular_bash_parse_defaults
+
     #   set a local variable that holds the current word being completed
     cur=${COMP_WORDS[COMP_CWORD]}
     # Get the list of all modules and all enabled modules
-    modules=$(ls "$(dirname "${BASH_SOURCE[0]}")/modules/"*.sh 2>/dev/null | xargs -n1 basename | sort)
-    local_modules="$(ls "$(dirname "${BASH_SOURCE[0]}")/local/"*.sh 2>/dev/null | xargs -n1 basename | sort)"
+    modules=$(ls "$MODULAR_BASH_ROOT/modules/"*.sh 2>/dev/null | xargs -n1 basename | sort)
+    local_modules="$(ls "$MODULAR_BASH_ROOT/local/"*.sh 2>/dev/null | xargs -n1 basename | sort)"
     for module in $modules; do
         if [ -n "${_modular_bash_enabled_global_modules[$module]}" ]; then
             continue
@@ -794,10 +752,11 @@ function _complete_modular_bash_disable() {
     local cur
     local completion_modules
     local completion_modules_short
-    #   set a local variable that holds the current word being completed
+
+    # set a local variable that holds the current word being completed
     cur=${COMP_WORDS[COMP_CWORD]}
     # Get the list of all modules and all enabled modules
-    enabled_modules=$(ls "$(dirname "${BASH_SOURCE[0]}")/enabled/"*.sh 2>/dev/null | xargs -n 1 basename | sort)
+    enabled_modules=$(ls "$MODULAR_BASH_ROOT/enabled/"*.sh 2>/dev/null | xargs -n 1 basename | sort)
     # iterate through enabled_modules and lookup the location of the module in the _modular_bash_enabled_module_locations map
     # and the module name in the _modular_bash_enabled_module_names map to get the full module name with the location prefix
     # and add it to completion_modules list
@@ -830,8 +789,8 @@ function _complete_modular_bash_all_modules() {
     #   set a local variable that holds the current word being completed
     cur=${COMP_WORDS[COMP_CWORD]}
     # Get the list of all modules and all enabled modules
-    modules=$(ls "$(dirname "${BASH_SOURCE[0]}")/modules/"*.sh 2>/dev/null | sort)
-    local_modules="$(ls "$(dirname "${BASH_SOURCE[0]}")/local/"*.sh 2>/dev/null | sort)"
+    modules=$(ls "$MODULAR_BASH_ROOT/modules/"*.sh 2>/dev/null | sort)
+    local_modules="$(ls "$MODULAR_BASH_ROOT/local/"*.sh 2>/dev/null | sort)"
     all_modules=$(echo "$modules $local_modules" | xargs -n 1 basename | sort | uniq | sed 's/\.sh$//')
     # Generate the list of all of the local and global modules with their respective prefixes
     local_module_refs=$(echo "$local_modules" | xargs -n 1 basename | sed 's/^/local\//' | sort)
