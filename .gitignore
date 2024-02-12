@@ -1,3 +1,6 @@
 .vscode/*
 local/*
 enabled/*
+
+.DS_Store
+
