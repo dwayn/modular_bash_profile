@@ -329,8 +329,8 @@ function modular_bash_enable() {
     global_modules="$(ls "$MODULAR_BASH_ROOT/modules/"*.sh 2>/dev/null | sort)"
 
     # Determine if the module is in the local or global folder
-    if echo "$local_modules" | grep -q "$module"; then
-        if echo "$global_modules" | grep -q "$module"; then
+    if echo "$local_modules" | grep -q "/$module"; then
+        if echo "$global_modules" | grep -q/ "$module"; then
             echo "Duplicate module found in local and global: $module \nPlease indicate which module \
             to enable using the local/ or global/ prefix. E.g. local/$module or global/$module"
             return 1
@@ -431,8 +431,8 @@ function modular_bash_disable() {
     enabled_modules=$(ls "$MODULAR_BASH_ROOT/enabled/"*.sh 2>/dev/null | xargs -n 1 basename | sort)
 
     # determine if the module is in the local or global folder
-    if echo "$local_modules" | grep -q "$module"; then
-        if echo "$global_modules" | grep -q "$module"; then
+    if echo "$local_modules" | grep -q "/$module"; then
+        if echo "$global_modules" | grep -q/ "$module"; then
             echo "Duplicate module found in local and global: $module \nPlease indicate which module \
             to enable using the local/ or global/ prefix. E.g. local/$module or global/$module"
             return 1
@@ -570,8 +570,8 @@ function modular_bash_priority() {
     fi
 
     # determine if the module is in the local or global folder
-    if echo "$local_modules" | grep -q "$module"; then
-        if echo "$modules" | grep -q "$module"; then
+    if echo "$local_modules" | grep -q "/$module"; then
+        if echo "$modules" | grep -q "/$module"; then
             echo "Duplicate module found in local and global: $module \nPlease indicate which module \
             to enable using the local/ or global/ prefix. E.g. local/$module or global/$module"
             return 1
@@ -639,8 +639,8 @@ function modular_bash_cat() {
     module_name=$(basename $module)
 
     # Output the contents of the module file
-    if echo "$local_modules" | grep -q "$module"; then
-        if echo "$modules" | grep -q "$module"; then
+    if echo "$local_modules" | grep -q "/$module"; then
+        if echo "$modules" | grep -q "/$module"; then
             echo "Duplicate module found in local and global: $module \nPlease indicate which module \
             to view using the local/ or global/ prefix. E.g. local/$module or global/$module"
             return 1
@@ -676,8 +676,8 @@ function modular_bash_edit() {
     module_name=$(basename $module)
 
     # Edit the contents of the module file
-    if echo "$local_modules" | grep -q "$module"; then
-        if echo "$modules" | grep -q "$module"; then
+    if echo "$local_modules" | grep -q "/$module"; then
+        if echo "$modules" | grep -q "/$module"; then
             echo "Duplicate module found in local and global: $module \nPlease indicate which module \
             to edit using the local/ or global/ prefix. E.g. local/$module or global/$module"
             return 1
