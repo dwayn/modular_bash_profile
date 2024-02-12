@@ -316,6 +316,76 @@ function modular_bash_priority() {
     modular_bash_rename $module $new_module
 }
 
+# Bash function that just outputs the contents of a module file.
+function modular_bash_cat() {
+    # Protect against not providing a module name
+    if [ -z "$1" ]; then
+        echo "No module name provided"
+        return 1
+    fi
+    local module
+    local module_name
+    #   set a local variable that holds the name of the module requested, and if it does not end in .sh,
+    #  then append it to the end of the module name.
+    module=$1
+    module=$(echo $1 | sed 's/^global\//modules\//')
+    if [ "${module: -3}" != ".sh" ]; then
+        module+=".sh"
+    fi
+    module_name=$(basename $module)
+
+    # Output the contents of the module file
+    if echo "$local_modules" | grep -q "$module"; then
+        if echo "$modules" | grep -q "$module"; then
+            echo "Duplicate module found in local and global: $module \nPlease indicate which module \
+            to view using the local/ or global/ prefix. E.g. local/$module or global/$module"
+            return 1
+        fi
+        cat "$(dirname "${BASH_SOURCE[0]}")/local/$module_name"
+        echo
+    elif echo "$modules" | grep -q "$module"; then
+        cat "$(dirname "${BASH_SOURCE[0]}")/modules/$module_name"
+        echo
+    else
+        echo "Module not found: $1"
+        return 1
+    fi
+
+}
+
+# Bash function that opens a module file in the default editor.
+function modular_bash_edit() {
+    # Protect against not providing a module name
+    if [ -z "$1" ]; then
+        echo "No module name provided"
+        return 1
+    fi
+    local module
+    local module_name
+    #   set a local variable that holds the name of the module requested, and if it does not end in .sh,
+    #  then append it to the end of the module name.
+    module=$1
+    module=$(echo $1 | sed 's/^global\//modules\//')
+    if [ "${module: -3}" != ".sh" ]; then
+        module+=".sh"
+    fi
+    module_name=$(basename $module)
+
+    # Edit the contents of the module file
+    if echo "$local_modules" | grep -q "$module"; then
+        if echo "$modules" | grep -q "$module"; then
+            echo "Duplicate module found in local and global: $module \nPlease indicate which module \
+            to edit using the local/ or global/ prefix. E.g. local/$module or global/$module"
+            return 1
+        fi
+        $EDITOR "$(dirname "${BASH_SOURCE[0]}")/local/$module_name"
+    elif echo "$modules" | grep -q "$module"; then
+        $EDITOR "$(dirname "${BASH_SOURCE[0]}")/modules/$module_name"
+    else
+        echo "Module not found: $1"
+        return 1
+    fi
+}
 
 
 # Bash completion function to complete the module names for the enable function. This
@@ -360,7 +430,7 @@ complete -F _complete_modular_bash_disable modular_bash_disable
 # .sh files in the modules and local folder, excluding the README.md files. This should complete on the
 # module name with and without the .sh file extension, as well as with or without the local/ or global/
 # prefix. This only outputs the filename of the module (without the file extension) and not the full path.
-function _complete_modular_bash_rename() {
+function _complete_modular_bash_all_modules() {
     local cur
     #   set a local variable that holds the current word being completed
     cur=${COMP_WORDS[COMP_CWORD]}
@@ -376,6 +446,8 @@ function _complete_modular_bash_rename() {
     COMPREPLY=($(compgen -W "$all_module_refs" -- "$cur"))
 }
 
-# Register the completion function for the rename function
-complete -F _complete_modular_bash_rename modular_bash_rename
-complete -F _complete_modular_bash_rename modular_bash_priority
+# Register the completion function for the functions that work on any module
+complete -F _complete_modular_bash_all_modules modular_bash_rename
+complete -F _complete_modular_bash_all_modules modular_bash_priority
+complete -F _complete_modular_bash_all_modules modular_bash_cat
+complete -F _complete_modular_bash_all_modules modular_bash_edit
