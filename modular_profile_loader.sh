@@ -6,6 +6,30 @@
 # Add this line to whichever profile file from above you use
 # source /path/to/modular_bash_profile/modular_profile_loader.sh
 
+
+# TODO List:
+# After working with it for a bit, the way that local modules and shared modules are handled
+#   has turned out to be quite a pain.
+# - It would be better to rework the directory structure to have a modules directory and then within
+#   that, have local, shared, and enabled directories. Then rework all the references in the function code to use
+#   the new directory structure directly and stop needing to remap the name of the global module groups to the
+#   directory structure and back. This would also make for a more consistent way to handle the default
+#   priorities and enabled/disabled status for the modules.
+# - Maybe add a .defaults file to each of the directories for the modules in that group instead of a
+#   global defaults file. This would allow the default priorities to be checked in for shared modules
+#   to act as an ordering guide. There could then be a defaults file in the local modules directory
+#   that would allow for the default enabled/disabled status to be set for the local modules. Then when
+#   the user saves their defaults, that could be saved in the enabled directory with their actual configured
+#   priorities
+# - Add a function to enable modules based on the their defaults for whether they are enabled or disabled.
+#   This would allow for new modules to be added in git with a default configuration of enabled and then
+#   when the repo is pulled down, it would make for really easy/quick update of the the enabled modules
+#   to the latest version of the repo state.
+# - Figure out a way to make the management code more modular, reuse code more, and easier to navigate.
+#   It is a bit of a mess because I threw it together quickly and then added a bunch of features to it
+#   without designing for modularity
+
+
 # Map of enabled module name to the location of the module file (local or global)
 declare -A _modular_bash_enabled_module_locations
 # Map of enabled module name to the priority of the module
