@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+
+print("\033[39m\\033[49m                         - Reset color")
+print("\\033[2K                          - Clear Line")
+print("\\033[<L>;<C>H or \\033[<L>;<C>f   - Put the cursor at line L and column C.")
+print("\\033[<N>A                        - Move the cursor up N lines")
+print("\\033[<N>B                        - Move the cursor down N lines")
+print("\\033[<N>C                        - Move the cursor forward N columns")
+print("\\033[<N>D                        - Move the cursor backward N columns\n")
+
+print("\\033[2J                          - Clear the screen, move to (0,0)")
+print("\\033[K                           - Erase to end of line")
+print("\\033[s                           - Save cursor position")
+print("\\033[u                           - Restore cursor position\n")
+
+
+print("Foreground Colors (basic)")
+for i in range(30, 38):
+    print("\033[%dm%d\033[49m\t\t\033[%dm%d\033[49m" % (i, i, i + 60, i + 60))
+print("-----------------\n")
+print("Background Colors (basic)")
+for i in range(40, 48):
+    print("\033[%dm%d\033[49m\t\t\033[%dm%d\033[49m" % (i, i, i + 60, i + 60))
+print("-----------------\n")
+print("\033[33;44m\\033[33;44m\033[0m                    - Apply basic colors to text (can be combined with \";\")\n")
+
+print("----- 8-bit (256) Colors -----")
+for i in range(0, 15):
+    print(  "\033[38;5;%dm%d\033[0m" % (16 * i, i), end="")
+    print("\t\033[38;5;%dm%d\033[0m" % (16 * i + 1, 16 * i + 1), end= "")
+    print("\t\033[38;5;%dm%d\033[0m" % (16 * i + 2, 16 * i + 2), end= "")
+    print("\t\033[38;5;%dm%d\033[0m" % (16 * i + 3, 16 * i + 3), end= "")
+    print("\t\033[38;5;%dm%d\033[0m" % (16 * i + 4, 16 * i + 4), end= "")
+    print("\t\033[38;5;%dm%d\033[0m" % (16 * i + 5, 16 * i + 5), end= "")
+    print("\t\033[38;5;%dm%d\033[0m" % (16 * i + 6, 16 * i + 6), end= "")
+    print("\t\033[38;5;%dm%d\033[0m" % (16 * i + 7, 16 * i + 7), end= "")
+    print("\t\033[38;5;%dm%d\033[0m" % (16 * i + 8, 16 * i + 8), end= "")
+    print("\t\033[38;5;%dm%d\033[0m" % (16 * i + 9, 16 * i + 9), end= "")
+    print("\t\033[38;5;%dm%d\033[0m" % (16 * i + 10, 16 * i + 10), end= "")
+    print("\t\033[38;5;%dm%d\033[0m" % (16 * i + 11, 16 * i + 11), end= "")
+    print("\t\033[38;5;%dm%d\033[0m" % (16 * i + 12, 16 * i + 12), end= "")
+    print("\t\033[38;5;%dm%d\033[0m" % (16 * i + 13, 16 * i + 13), end= "")
+    print("\t\033[38;5;%dm%d\033[0m" % (16 * i + 14, 16 * i + 14), end= "")
+    print("\t\033[38;5;%dm%d\033[0m" % (16 * i + 15, 16 * i + 15))
+print("\033[38;5;53;48;5;231m\\033[38;5;53;48;5;231m\033[0m          - Set 8-bit color [FG: 38;5;<color>, BG: 48;5;<color>]\n")
+
+
+print("----- Full spectrum RGB Colors -----")
+print("\\033[38;2;<r>;<g>;<b>m           - Select RGB foreground color, EG: \033[38;2;31;128;148m\\033[38;2;31;128;148m\033[0m")
+print("\\033[48;2;<r>;<g>;<b>m           - Select RGB background color, EG: \033[48;2;31;128;148;30m\\033[48;2;31;128;148;30m\033[0m\n")
+
+
+
+
+print("\033[0m\\033[0m                          - \033[1;91mReset all attributes\033[0m\n")
+
+print("\\033[1m                          - \033[1mBold on\033[0m")
+print("\\033[21m                         - Bold off\n")
+
+print("\\033[3m                          - \033[3mItalic on\033[23m")
+print("\\033[23m                         - Italic off\n")
+
+print("\\033[4m                          - \033[4mUnderline on\033[24m")
+print("\\033[24m                         - Underline off\n")
+
+print("\\033[2m                          - \033[2mFaint on\033[22m")
+print("\\033[22m                         - Normal (bold and faint off)\n")
+
+print("\\033[9m                          - \033[9mStrikethrough\033[29m")
+print("\\033[29m                         - Strikethrough off\n")
+
+print("\\033[7m                          - \033[7mBG/FG inverse (color swap)\033[27m")
+print("\\033[27m                         - Inverse off\n")
+
+
+
+
