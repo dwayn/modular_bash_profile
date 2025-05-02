@@ -15,6 +15,8 @@
 #   the new directory structure directly and stop needing to remap the name of the global module groups to the
 #   directory structure and back. This would also make for a more consistent way to handle the default
 #   priorities and enabled/disabled status for the modules.
+# - Also, after thinking about it for a while, I do not like the naming of global/local for modules,
+#   consider changing them to shared/local
 # - Maybe add a .defaults file to each of the directories for the modules in that group instead of a
 #   global defaults file. This would allow the default priorities to be checked in for shared modules
 #   to act as an ordering guide. There could then be a defaults file in the local modules directory
