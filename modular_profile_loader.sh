@@ -3,8 +3,9 @@
 #   ~/.profile
 #   ~/.bashrc
 
-# Add this line to whichever profile file from above you use
-# source /path/to/modular_bash_profile/modular_profile_loader.sh
+# Add this line to whichever profile file from above you use (pro tip, provide an absolute path using $HOME or 
+# other path variables that expand to an absolute path to ensure best compatibility with various terminals)
+# source [$HOME]/path/to/modular_bash_profile/modular_profile_loader.sh
 
 
 # TODO List:

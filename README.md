@@ -1,13 +1,15 @@
 # Modular Bash Profile
 
 ## Setup
-Root bash profile script that should be sourced from your automatically sourced profile file
+Root bash profile script that should be sourced from your automatically sourced profile file. In my personal
+experience `.bash_profile` seems to be the most broadly compatible with various terminals (both independent
+and embedded, eg: VS Code).
 *  ~/.bash_profile
 *  ~/.profile
 *  ~/.bashrc
 
-Add this line to whichecer profile file from above you use
-
+Add this line to whichever profile file from above you use (pro tip, provide an absolute path using $HOME or
+other path variables that expand to an absolute path to ensure best compatibility with various terminals)
 ```
 source /path/to/modular_bash_profile/modular_profile_loader.sh
 ```
